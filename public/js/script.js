@@ -295,6 +295,25 @@ function handleSort() {
             break;
     }
 }
+
+function votePog(pogId, voteType) {
+    fetch(`/api/pogs/${pogId}/${voteType}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then(response => response.text())
+      .then(message => {
+        alert(message); // Show a message to the user
+        // Refresh the modal to update the vote counts
+        showPogDetails(pogId);
+      })
+      .catch(error => {
+        console.error('Error voting on pog:', error);
+      });
+  }
+
 function showPogDetails(uid) {
     fetch(`/api/pogs/${uid}`)
         .then(response => response.json())
@@ -311,6 +330,11 @@ function showPogDetails(uid) {
                 <div class="modal-text">
                     <span class="close" onclick="closeModal()">&times;</span>
                     <h2>Pog Details</h2>
+                    <p><strong>Upvotes:</strong> <span id="upvotes">${data.upvotes || 0}</span></p>
+                    <p><strong>Downvotes:</strong> <span id="downvotes">${data.downvotes || 0}</span></p>
+                    <button onclick="votePog(${data.uid}, 'upvote')">Upvote</button>
+                    <button onclick="votePog(${data.uid}, 'downvote')">Downvote</button>
+                    <button onclick="votePog(${data.uid}, 'removeVote')">Remove Vote</button>
                     <p><strong>ID:</strong> ${data.uid}</p>
                     <p><strong>Serial:</strong> ${data.serial}</p>
                     <p><strong>Name:</strong> ${data.name}</p>
