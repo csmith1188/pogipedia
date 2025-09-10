@@ -116,6 +116,8 @@ function handleSort() {
         case "tags":
             sortTable(4);
             break;
+        case "upVote":
+
     }
 
 } function showPogDetails(uid) {
@@ -263,29 +265,77 @@ function sortTable(n, isNumeric = false, dir = "asc") {
 
 function handleSort() {
     var sortOption = document.getElementById("sortOptions").value;
+    let sortBy, sortOrder;
+
     switch (sortOption) {
         case "idAsc":
-            sortTable(0, true, "asc");
+            sortBy = "uid";
+            sortOrder = "asc";
             break;
         case "idDesc":
-            sortTable(0, true, "desc");
+            sortBy = "uid";
+            sortOrder = "desc";
             break;
         case "nameAsc":
-            sortTable(2, false, "asc");
+            sortBy = "name";
+            sortOrder = "asc";
             break;
         case "nameDesc":
-            sortTable(2, false, "desc");
+            sortBy = "name";
+            sortOrder = "desc";
             break;
         case "serial":
-            sortTable(1);
+            sortBy = "serial";
+            sortOrder = "asc";
             break;
         case "color":
-            sortTable(3);
+            sortBy = "color";
+            sortOrder = "asc";
             break;
         case "tags":
-            sortTable(4);
+            sortBy = "tags";
+            sortOrder = "asc";
+            break;
+        case "upvotesDesc":
+            sortBy = "upvotes";
+            sortOrder = "desc";
+            break;
+        case "upvotesAsc":
+            sortBy = "upvotes";
+            sortOrder = "asc";
+            break;
+        case "downvotesDesc":
+            sortBy = "downvotes";
+            sortOrder = "desc";
+            break;
+        case "downvotesAsc":
+            sortBy = "downvotes";
+            sortOrder = "asc";
             break;
     }
+
+    // Fetch sorted data from the server
+    fetch(`/api/pogs?sortBy=${sortBy}&sortOrder=${sortOrder}`)
+        .then(response => response.json())
+        .then(data => {
+            var table = document.getElementById("allPogsTable").getElementsByTagName('tbody')[0];
+            table.innerHTML = ''; // Clear the table before adding new rows
+            data.forEach(function (pog) {
+                var row = table.insertRow();
+                row.style.backgroundColor = getBackgroundColor(pog.rank); // Set the background color based on rank
+                row.insertCell(0).innerText = pog.uid;
+                row.insertCell(1).innerText = pog.serial;
+                row.insertCell(2).innerText = pog.name;
+                row.insertCell(3).innerText = pog.color;
+                row.insertCell(4).innerText = pog.tags;
+                row.addEventListener('click', function () {
+                    showPogDetails(pog.uid);
+                });
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching sorted pogs:', error);
+        });
 }
 
 function votePog(pogId, voteType) {

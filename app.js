@@ -204,9 +204,18 @@ app.post('/searchPogs', (req, res) => {
   });
 });
 
-// Route to get all pogs with their tags using uid for uid tags
+// Route to get all pogs with sorting options
 app.get('/api/pogs', (req, res) => {
-  const sql = 'SELECT uid, serial, name, color, tags, rank FROM pogs';
+  const sortBy = req.query.sortBy || 'uid'; // Default sort by ID
+  const sortOrder = req.query.sortOrder === 'desc' ? 'DESC' : 'ASC'; // Default sort order is ascending
+
+  // Validate the sortBy parameter to prevent SQL injection
+  const validSortColumns = ['uid', 'serial', 'name', 'color', 'tags', 'rank', 'upvotes', 'downvotes'];
+  if (!validSortColumns.includes(sortBy)) {
+    return res.status(400).send('Invalid sort column');
+  }
+
+  const sql = `SELECT uid, serial, name, color, tags, rank, upvotes, downvotes FROM pogs ORDER BY ${sortBy} ${sortOrder}`;
   db.all(sql, [], (err, rows) => {
     if (err) {
       return res.status(500).send(err.message);

@@ -66,6 +66,7 @@
             <input type="text" id="searchSerialInput" placeholder="Search by Serial">
             <input type="text" id="searchTagsInput" placeholder="Search by Tags">
             <button onclick="searchPogs()">Search</button>
+            <!-- <button onclick = "clear()">Clear</button> -->
             <select id="sortOptions" onchange="handleSort()">
                 <option value="idAsc">Sort by ID (Less to Greatest)</option>
                 <option value="idDesc">Sort by ID (Greatest to Less)</option>
@@ -74,14 +75,20 @@
                 <option value="serial">Sort by Serial</option>
                 <option value="color">Sort by Color</option>
                 <option value="tags">Sort by Tags</option>
+                <option value="upvotesDesc">Sort by Upvotes (Most to Least)</option>
+                <option value="upvotesAsc">Sort by Upvotes (Least to Most)</option>
+                <option value="downvotesDesc">Sort by Downvotes (Most to Least)</option>
+                <option value="downvotesAsc">Sort by Downvotes (Least to Most)</option>
             </select>
         </div>
         <table id="allPogsTable" border="1" style="margin: 0 auto;">
             <thead>
-               
+                <tr>
+
+                </tr>
             </thead>
             <tbody>
-              
+
             </tbody>
         </table>
     </div>
