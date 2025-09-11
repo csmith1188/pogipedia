@@ -340,21 +340,21 @@ function handleSort() {
 
 function votePog(pogId, voteType) {
     fetch(`/api/pogs/${pogId}/${voteType}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
     })
-      .then(response => response.text())
-      .then(message => {
-        alert(message); // Show a message to the user
-        // Refresh the modal to update the vote counts
-        showPogDetails(pogId);
-      })
-      .catch(error => {
-        console.error('Error voting on pog:', error);
-      });
-  }
+        .then(response => response.text())
+        .then(message => {
+            alert(message); // Show a message to the user
+            // Refresh the modal to update the vote counts
+            showPogDetails(pogId);
+        })
+        .catch(error => {
+            console.error('Error voting on pog:', error);
+        });
+}
 
 function showPogDetails(uid) {
     fetch(`/api/pogs/${uid}`)
@@ -440,6 +440,8 @@ function clearSearchInputs() {
     document.getElementById("searchNameInput").value = '';
     document.getElementById("searchSerialInput").value = '';
     document.getElementById("searchTagsInput").value = '';
+    
+    searchPogs();
 }
 
 function applyTheme(isDarkMode) {
