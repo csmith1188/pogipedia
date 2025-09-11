@@ -173,6 +173,11 @@ function showTab(tabId) {
     });
     document.getElementById(tabId).classList.add('active');
 }
+document.addEventListener('keydown', (event) => {
+    if (event.key === "Enter") {
+        searchPogs();
+    }
+});
 function searchPogs() {
     var idInput = document.getElementById("searchIdInput").value;
     var nameInput = document.getElementById("searchNameInput").value;
@@ -440,7 +445,7 @@ function clearSearchInputs() {
     document.getElementById("searchNameInput").value = '';
     document.getElementById("searchSerialInput").value = '';
     document.getElementById("searchTagsInput").value = '';
-    
+
     searchPogs();
 }
 
