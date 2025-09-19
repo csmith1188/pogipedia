@@ -234,6 +234,8 @@ function handleSort() {
         case "tags":
             sortTable(4);
             break;
+        case "upVote":
+
     }
 
 } function showPogDetails(uid) {
@@ -289,6 +291,11 @@ function showTab(tabId) {
     });
     document.getElementById(tabId).classList.add('active');
 }
+document.addEventListener('keydown', (event) => {
+    if (event.key === "Enter") {
+        searchPogs();
+    }
+});
 function searchPogs() {
     var idInput = document.getElementById("searchIdInput").value;
     var nameInput = document.getElementById("searchNameInput").value;
@@ -381,30 +388,97 @@ function sortTable(n, isNumeric = false, dir = "asc") {
 
 function handleSort() {
     var sortOption = document.getElementById("sortOptions").value;
+    let sortBy, sortOrder;
+
     switch (sortOption) {
         case "idAsc":
-            sortTable(0, true, "asc");
+            sortBy = "uid";
+            sortOrder = "asc";
             break;
         case "idDesc":
-            sortTable(0, true, "desc");
+            sortBy = "uid";
+            sortOrder = "desc";
             break;
         case "nameAsc":
-            sortTable(2, false, "asc");
+            sortBy = "name";
+            sortOrder = "asc";
             break;
         case "nameDesc":
-            sortTable(2, false, "desc");
+            sortBy = "name";
+            sortOrder = "desc";
             break;
         case "serial":
-            sortTable(1);
+            sortBy = "serial";
+            sortOrder = "asc";
             break;
         case "color":
-            sortTable(3);
+            sortBy = "color";
+            sortOrder = "asc";
             break;
         case "tags":
-            sortTable(4);
+            sortBy = "tags";
+            sortOrder = "asc";
+            break;
+        case "upvotesDesc":
+            sortBy = "upvotes";
+            sortOrder = "desc";
+            break;
+        case "upvotesAsc":
+            sortBy = "upvotes";
+            sortOrder = "asc";
+            break;
+        case "downvotesDesc":
+            sortBy = "downvotes";
+            sortOrder = "desc";
+            break;
+        case "downvotesAsc":
+            sortBy = "downvotes";
+            sortOrder = "asc";
             break;
     }
+
+    // Fetch sorted data from the server
+    fetch(`/api/pogs?sortBy=${sortBy}&sortOrder=${sortOrder}`)
+        .then(response => response.json())
+        .then(data => {
+            var table = document.getElementById("allPogsTable").getElementsByTagName('tbody')[0];
+            table.innerHTML = ''; // Clear the table before adding new rows
+            data.forEach(function (pog) {
+                var row = table.insertRow();
+                row.style.backgroundColor = getBackgroundColor(pog.rank); // Set the background color based on rank
+                row.insertCell(0).innerText = pog.uid;
+                row.insertCell(1).innerText = pog.serial;
+                row.insertCell(2).innerText = pog.name;
+                row.insertCell(3).innerText = pog.color;
+                row.insertCell(4).innerText = pog.tags;
+                row.addEventListener('click', function () {
+                    showPogDetails(pog.uid);
+                });
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching sorted pogs:', error);
+        });
 }
+
+function votePog(pogId, voteType) {
+    fetch(`/api/pogs/${pogId}/${voteType}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => response.text())
+        .then(message => {
+            alert(message); // Show a message to the user
+            // Refresh the modal to update the vote counts
+            showPogDetails(pogId);
+        })
+        .catch(error => {
+            console.error('Error voting on pog:', error);
+        });
+}
+
 function showPogDetails(uid) {
     fetch(`/api/pogs/${uid}`)
         .then(response => response.json())
@@ -419,6 +493,11 @@ function showPogDetails(uid) {
                 <div class="modal-text">
                     <span class="close" onclick="closeModal()">&times;</span>
                     <h2>Pog Details</h2>
+                    <p><strong>Upvotes:</strong> <span id="upvotes">${data.upvotes || 0}</span></p>
+                    <p><strong>Downvotes:</strong> <span id="downvotes">${data.downvotes || 0}</span></p>
+                    <button onclick="votePog(${data.uid}, 'upvote')">Upvote</button>
+                    <button onclick="votePog(${data.uid}, 'downvote')">Downvote</button>
+                    <button onclick="votePog(${data.uid}, 'removeVote')">Remove Vote</button>
                     <p><strong>ID:</strong> ${data.uid}</p>
                     <p><strong>Serial:</strong> ${data.serial}</p>
                     <p><strong>Name:</strong> ${data.name}</p>
@@ -484,6 +563,8 @@ function clearSearchInputs() {
     document.getElementById("searchNameInput").value = '';
     document.getElementById("searchSerialInput").value = '';
     document.getElementById("searchTagsInput").value = '';
+
+    searchPogs();
 }
 
 function applyTheme(isDarkMode) {

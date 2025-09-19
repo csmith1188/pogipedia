@@ -4,8 +4,9 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const session = require('express-session');
-const AUTH_URL = 'http://localhost:420/oauth';
-const THIS_URL = 'http://172.16.3.209:3000/login';
+const { send } = require('process');
+const AUTH_URL = 'http://localhost:420/oauth'; // replace with desiered OAuth URL. Currently set to local Formbar instance
+const THIS_URL = 'http://localhost:3000/login';
 const app = express();
 const port = 3000;
 
@@ -81,6 +82,26 @@ function initializeDatabase() {
         imageUrl TEXT
       )
     `);
+
+    // Create the 'users' table if it doesn't exist
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+      fb_name TEXT NOT NULL,
+      fb_id TEXT NOT NULL
+      )
+      `);
+
+      // Create the 'votes' table if it doesn't exist
+      db.run(`
+        CREATE TABLE IF NOT EXISTS votes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        pog_id INTEGER NOT NULL,
+        vote_type TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (fb_id),
+        FOREIGN KEY (pog_id) REFERENCES pogs (uid)
+        )
+        `)
 
     // Create the 'variations' table if it doesn't exist
     db.run(`
@@ -183,9 +204,18 @@ app.post('/searchPogs', (req, res) => {
   });
 });
 
-// Route to get all pogs with their tags using uid for uid tags
+// Route to get all pogs with sorting options
 app.get('/api/pogs', (req, res) => {
-  const sql = 'SELECT uid, serial, name, color, tags, rank FROM pogs';
+  const sortBy = req.query.sortBy || 'uid'; // Default sort by ID
+  const sortOrder = req.query.sortOrder === 'desc' ? 'DESC' : 'ASC'; // Default sort order is ascending
+
+  // Validate the sortBy parameter to prevent SQL injection
+  const validSortColumns = ['uid', 'serial', 'name', 'color', 'tags', 'rank', 'upvotes', 'downvotes'];
+  if (!validSortColumns.includes(sortBy)) {
+    return res.status(400).send('Invalid sort column');
+  }
+
+  const sql = `SELECT uid, serial, name, color, tags, rank, upvotes, downvotes FROM pogs ORDER BY ${sortBy} ${sortOrder}`;
   db.all(sql, [], (err, rows) => {
     if (err) {
       return res.status(500).send(err.message);
@@ -193,6 +223,7 @@ app.get('/api/pogs', (req, res) => {
     res.json(rows);
   });
 });
+
 // Route to get all data about an individual pog
 app.get('/api/pogs/:uid', (req, res) => {
   const uid = req.params.uid;
@@ -203,6 +234,103 @@ app.get('/api/pogs/:uid', (req, res) => {
         res.json(row);
     }
 });
+});
+
+// Route to handle upvotes
+app.post('/api/pogs/:id/upvote', isAuthenticated, (req, res) => {
+  const pogId = req.params.id;
+  const userId = req.session.token.id; // Use the logged-in user's ID
+
+  // Check if the user has already voted
+  db.get('SELECT * FROM votes WHERE user_id = ? AND pog_id = ?', [userId, pogId], (err, row) => {
+    if (err) return res.status(500).send(err.message);
+
+    if(row) {
+      if(row.vote_type === 'upvote') {
+        return res.status(400).send('You have already upvoted this pog.');
+      } else {
+        // Change downvote to upvote
+        db.run('UPDATE votes SET vote_type = ? WHERE id = ?', ['upvote', row.id], (err) => {
+          if (err) return res.status(500).send (err.message);
+          db.run('UPDATE pogs SET upvotes = upvotes + 1, downvotes = downvotes -1 WHERE uid = ?', [pogId], (err) => {
+            if (err) return res.status(500).send(err.message);
+          });
+        });
+      };
+    } else {
+      // Add a new upvote
+      db.run('INSERT INTO votes (user_id, pog_id, vote_type) VALUES (?, ?, ?)', [userId, pogId, 'upvote'], (err)=> {
+        if (err) return res.status(500).send(err.message);
+        db.run('UPDATE pogs SET upvotes = upvotes + 1 WHERE uid = ?', [pogId], (err)=> {
+          if (err) return res.status(500).send(err.message);
+          res.send('Pog Upvoted.');
+        })
+      })
+    }
+  });
+});
+
+// Route to handle downvotes
+app.post('/api/pogs/:id/downvote', isAuthenticated, (req, res) => {
+  const pogId = req.params.id;
+  const userId = req.session.token.id; // Use the logged-in user's ID
+
+  // Check if the user has already voted
+  db.get('SELECT * FROM votes WHERE user_id = ? AND pog_id = ?', [userId, pogId], (err, row) => {
+    if (err) return res.status(500).send(err.message);
+
+    if (row) {
+      if (row.vote_type === 'downvote') {
+        return res.status(400).send('You have already downvoted this pog.');
+      } else {
+        // Change upvote to downvote
+        db.run('UPDATE votes SET vote_type = ? WHERE id = ?', ['downvote', row.id], (err) => {
+          if (err) return res.status(500).send(err.message);
+
+          db.run('UPDATE pogs SET downvotes = downvotes + 1, upvotes = upvotes - 1 WHERE uid = ?', [pogId], (err) => {
+            if (err) return res.status(500).send(err.message);
+            res.send('Vote updated to downvote.');
+          });
+        });
+      }
+    } else {
+      // Add a new downvote
+      db.run('INSERT INTO votes (user_id, pog_id, vote_type) VALUES (?, ?, ?)', [userId, pogId, 'downvote'], (err) => {
+        if (err) return res.status(500).send(err.message);
+
+        db.run('UPDATE pogs SET downvotes = downvotes + 1 WHERE uid = ?', [pogId], (err) => {
+          if (err) return res.status(500).send(err.message);
+          res.send('Pog downvoted.');
+        });
+      });
+    }
+  });
+});
+
+// Route to handel removeing votes
+app.post('/api/pogs/:id/removevote', isAuthenticated, (req, res) => {
+  const pogId = req.params.id;
+  const userId = req.session.token.id; // Use the logged-in user's ID
+
+  // Check if the user has already voted
+  db.get('SELECT * FROM votes WHERE user_id = ? AND pog_id = ?', [userId, pogId], (err,row)=> {
+    if (err) return res.status(500).send(err.message);
+
+    if(row) {
+      // Remove a vote
+      db.run('DELETE FROM votes WHERE id = ?', [row.id], (err)=>{
+        if (err) return res.status(500).send(err.message);
+
+        const voteColumn = row.vote_type === 'upvote' ? 'upvotes' : 'downvotes';
+        db.run(`UPDATE pogs SET ${voteColumn} = ${voteColumn} -1 WHERE uid = ?`, [pogId], (err)=>{
+          if (err) return res.status(500).send(err.message);
+          res.send('Vote removed.');
+        });
+      })
+    } if (!row) {
+      res.status(400).send('You have not voted on this pog.')
+    }
+  })
 });
 
 // Route to get all data about an individual pog, including variations
