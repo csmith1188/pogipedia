@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const session = require('express-session');
 const AUTH_URL = 'http://formbar.yorktechapps.com/oauth';
-const THIS_URL = 'http://172.16.3.124:3000/login';
+const THIS_URL = 'http://172.16.3.254:3000/login';
 const app = express();
 const port = 3000;
 const cors = require('cors');
@@ -212,12 +212,12 @@ function seedDatabaseFromCsv() {
         // If the existing row has no lore, populate it from CSV. This prevents overwriting
         // any lore that was edited by users after initial seeding.
         db.run(
-          'UPDATE pogs SET lore = ? WHERE uid = ? AND (lore IS NULL OR TRIM(lore) = "")',
-          [lore || '', uid],
+          'UPDATE pogs SET name = ?, lore = ? WHERE uid = ? AND (lore IS NULL OR TRIM(lore) = "")',
+          [name, lore || '',  uid],
           function(uErr) {
             if (uErr) console.error('Seed update lore error for uid', uid, uErr);
           }
-        );
+        );  
       });
     });
 
@@ -372,6 +372,30 @@ app.get('/api/pogs/:uid', (req, res) => {
         res.json(row);
     }
   });
+});
+
+// Route to update editable pog information
+app.post('/api/update-pog', (req, res) => {
+  const { uid, name, lore, rank, creator, tags, color } = req.body;
+
+  if (!uid || typeof name !== 'string' || typeof lore !== 'string' ||
+      typeof rank !== 'string' || typeof creator !== 'string' ||
+      typeof tags !== 'string' || typeof color !== 'string') {
+    return res.status(400).json({ error: 'Invalid request data' });
+  }
+
+  db.run(
+    'UPDATE pogs SET name = ?, lore = ?, rank = ?, creator = ?, tags = ?, color = ? WHERE uid = ?',
+    [name, lore, rank, creator, tags, color, uid],
+    function (err) {
+      if (err) {
+        console.error('Error updating pog:', err);
+        return res.status(500).json({ error: 'Failed to update pog' });
+      }
+
+      res.json({ message: 'Pog updated successfully', changes: this.changes });
+    }
+  );
 });
 
 // Route to update a pog's description (lore)

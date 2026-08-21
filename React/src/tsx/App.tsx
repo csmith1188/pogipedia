@@ -17,8 +17,13 @@ function App() {
   const [selectedPog, setSelectedPog] = useState<Pog | null>(null);
   const [typingInBox, setTypingInBox] = useState(false);
   const [newDesc, setNewDesc] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newRank, setNewRank] = useState("");
+  const [newCreator, setNewCreator] = useState("");
+  const [newTags, setNewTags] = useState("");
+  const [newColor, setNewColor] = useState("");
   const [user, setUser] = useState<string | null>(null);
-  const IP = "172.16.3.124"; // Local IP address of the backend server, change if needed
+  const IP = "172.16.3.254"; // Local IP address of the backend server, change if needed
   const admin = user === "CarterQ" || user === "MrSmith" || user === "VincentL";
   const colors = {
     Trash: '#757028',
@@ -120,7 +125,7 @@ function App() {
               <div className = "topGradient" style={{background: `linear-gradient(to bottom, ${colors[selectedPog?.rank as keyof typeof colors] || colors.Unknown} 10%, transparent 80%)`}}></div>
               <div className = "toolsStretch">
                 <button className = "nav leave"
-                  onClick={() => {setViewDesc(!viewDesc); setTypingInBox(false); setNewDesc("")}}>
+                  onClick={() => {setViewDesc(!viewDesc); setTypingInBox(false); setNewDesc(""); setNewName(""); setNewRank(""); setNewCreator(""); setNewTags(""); setNewColor("");}}>
                   <p className = "backtxt" style={{margin: 0}}>➤</p>
                   <p>Back</p>
                 </button>
@@ -133,42 +138,75 @@ function App() {
                   <button className = "nav cancel" onClick={() => {
                     setTypingInBox(false);
                     setNewDesc("");
+                    setNewName("");
+                    setNewRank("");
+                    setNewCreator("");
+                    setNewTags("");
+                    setNewColor("");
                   }} style={{display: typingInBox ? "flex" : "none"}}>
                     <img src="/icons/x-mark-icon.png" width="18" height="18"/>
                     <p>Cancel</p>
                   </button>
                   <button className = "nav edit" onClick={() => {
                       if (!typingInBox) {
-                        // Entering edit mode: prefill the textarea with the existing lore
+                        // Entering edit mode: prefill both editable fields.
                         setNewDesc(selectedPog?.lore ?? "");
+                        setNewName(selectedPog?.name ?? "");
+                        setNewRank(selectedPog?.rank ?? "");
+                        setNewCreator(selectedPog?.creator ?? "");
+                        setNewTags(selectedPog?.tags ?? "");
+                        setNewColor(selectedPog?.color ?? "");
                         setTypingInBox(true);
                         return;
                       }
                       if (!selectedPog) return;
                       // Permission check before performing the fetch
                       if (!admin) {
-                        alert("You do not have permission to edit descriptions.");
+                        alert("You do not have permission to edit the information.");
                         setTypingInBox(false);
                         setNewDesc("");
                         return;
                       }
-                      // Submitting the edited lore to the backend
-                      fetch(`http://${IP}:3000/api/pogs/${selectedPog.uid}/description`, {
-                        method: 'PUT',
+                      // Submit the edited name and lore to the backend.
+                      fetch(`http://${IP}:3000/api/update-pog`, {
+                        method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ lore: newDesc }),
+                        body: JSON.stringify({
+                          uid: selectedPog.uid,
+                          lore: newDesc,
+                          name: newName,
+                          rank: newRank,
+                          creator: newCreator,
+                          tags: newTags,
+                          color: newColor,
+                        }),
                       })
-                      .then(res => res.json())
+                      .then(async res => {
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Failed to update pog');
+                        return data;
+                      })
                       .then(data => {
                         if (selectedPog) {
-                          setSelectedPog({ ...selectedPog, lore: newDesc });
-                          console.log(`${selectedPog.name}'s description updated to "${newDesc}"`, data);
+                          const updatedPog = {
+                            ...selectedPog,
+                            lore: newDesc,
+                            name: newName,
+                            rank: newRank,
+                            creator: newCreator,
+                            tags: newTags,
+                            color: newColor,
+                          };
+                          setSelectedPog(updatedPog);
+                          setPogs(currentPogs => currentPogs.map(pog => pog.uid === updatedPog.uid ? updatedPog : pog));
+                          console.log(`${selectedPog.name}'s information was updated`, data);
                         }
                       })
                       .catch(err => {
-                        console.error('Error updating description:', err);
+                        console.error('Error updating pog:', err);
+                        alert(err.message);
                       })
                       .finally(() => setTypingInBox(false));
                     }}>
@@ -179,7 +217,12 @@ function App() {
               </div> 
               <div className = "descTitle">
                 <img className = "descImg" src={`/pogs/${selectedPog?.code2}.webp`} alt={selectedPog?.name} width="200" height="200"/>
-                <h1 className = "descName">{selectedPog?.name}</h1>
+                {typingInBox ? <textarea 
+                  className = "nameEditBox" 
+                  value={newName}
+                  placeholder={selectedPog?.name}
+                  onChange={(e) => setNewName(e.target.value)} 
+                /> : (<h1 className = "descName">{selectedPog?.name}</h1>)}
               </div>
               {typingInBox ? (
                 <textarea 
@@ -193,16 +236,16 @@ function App() {
               )}
               <div className = "infoCont">
                 <div className = "inf">
-                    <h5>Rarity: {selectedPog?.rank}</h5>
+                    {typingInBox ? <label>Rarity: <input value={newRank} onChange={(e) => setNewRank(e.target.value)} /></label> : <h5>Rarity: {selectedPog?.rank}</h5>}
                 </div>
                 <div className = "inf">
-                  <h5>Creator: {selectedPog?.creator}</h5>
+                  {typingInBox ? <label>Creator: <input value={newCreator} onChange={(e) => setNewCreator(e.target.value)} /></label> : <h5>Creator: {selectedPog?.creator}</h5>}
                 </div>
                 <div className = "inf">
-                  <h5>Type: {selectedPog?.tags}</h5>
+                  {typingInBox ? <label>Type: <input value={newTags} onChange={(e) => setNewTags(e.target.value)} /></label> : <h5>Type: {selectedPog?.tags}</h5>}
                 </div>
                 <div className = "inf">
-                  <h5>Color: {selectedPog?.color}</h5>
+                  {typingInBox ? <label>Color: <input value={newColor} onChange={(e) => setNewColor(e.target.value)} /></label> : <h5>Color: {selectedPog?.color}</h5>}
                 </div>
               </div>
             </div>

@@ -296,6 +296,35 @@
   font-size: 0.9em;
 }
 
+.inf label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.inf input {
+  width: 90px;
+  min-width: 0;
+  padding: 3px 5px;
+  color: inherit;
+  background-color: rgb(35, 35, 35);
+  border: 1px solid rgb(100, 100, 100);
+  border-radius: 5px;
+}
+
+.inf input:focus {
+  outline: none;
+  border-color: rgb(180, 180, 180);
+}
+
+@media (max-width: 800px) {
+  .infoCont {
+    width: 90vw;
+  }
+}
+
 :root .topGradient {
   --opacity-var: 0.4;
 }
