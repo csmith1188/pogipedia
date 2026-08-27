@@ -23,8 +23,10 @@ function App() {
   const [newTags, setNewTags] = useState("");
   const [newColor, setNewColor] = useState("");
   const [user, setUser] = useState<string | null>(null);
-  const IP = "172.16.3.254"; // Local IP address of the backend server, change if needed
+  const apiUrl = import.meta.env.VITE_API_URL || "http://172.16.3.206:3000";
   const admin = user === "CarterQ" || user === "MrSmith" || user === "VincentL";
+
+  // Fetch API configuration on mount
   const colors = {
     Trash: '#757028',
     Common: '#deee4d',
@@ -47,7 +49,7 @@ function App() {
     if (tag) query.append("tag", tag);
     if (rarity) query.append("rarity", rarity);
 
-    fetch(`http://${IP}:3000/api/pogs?${query.toString()}`, {
+    fetch(`${apiUrl}/api/pogs?${query.toString()}`, {
       signal: controller.signal
     })
       .then(res => res.json())
@@ -55,7 +57,7 @@ function App() {
         setPogs(data.data);
         setTotalPages(data.totalPages);
       });
-    fetch(`http://${IP}:3000/getdata`, {
+    fetch(`${apiUrl}/getdata`, {
       signal: controller.signal
     })
       .then(res => res.json())
@@ -63,7 +65,7 @@ function App() {
         console.log(data.user);
         setUser(data.user);
       });
-  }, [page, search, tag, rarity]);
+  }, [page, search, tag, rarity, apiUrl]);
 
   useEffect(() => {
     setPage(1);
@@ -168,7 +170,7 @@ function App() {
                         return;
                       }
                       // Submit the edited name and lore to the backend.
-                      fetch(`http://${IP}:3000/api/update-pog`, {
+                      fetch(`${apiUrl}/api/update-pog`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
